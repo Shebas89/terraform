@@ -1,17 +1,31 @@
 # component-env-region-whatever (how we need to put the name)
 provider "aws" {
     profile = "default"
-    region = "us-east-1"
+    region = "us-west-2"
 }
 
 resource "aws_s3_bucket" "prod_mdle_s3"{ # type of the resource and the name of the resource (name is for tf)
-    bucket  = "shebas-bucket-mdt-2020-09-15" # name of the bucket
+    bucket  = "prod-mdle-west2-shebas" # name of the bucket
     acl     = "private" # po litic of the bucket
 }
 
 resource "aws_default_vpc" "default" {
     tags = {
         Name = "Default VPC (Terraform)"
+    }
+}
+
+resource "aws_default_subnet" "default_az1" {
+    availability_zone   = "us-west-2a"
+    tags = {
+        "Terraform" : "true"
+    }
+}
+
+resource "aws_default_subnet" "default_az2"{
+    availability_zone   = "us-west-2b"
+    tags = {
+        "Terraform" : "true"
     }
 }
 
@@ -81,7 +95,7 @@ resource "aws_network_acl" "prod_mdle_nacl" {
 resource "aws_instance" "prod_mdle_ec2" {
     count   = 2
 
-    ami             = "ami-02f3e801651bd39bc"
+    ami             = "ami-062ca315b459c9e61" # "ami-02f3e801651bd39bc"
     instance_type   = "t2.micro"
 
     vpc_security_group_ids = [
@@ -99,6 +113,24 @@ resource "aws_eip_association" "prod_mdle_eipa" {
 }
 
 resource "aws_eip" "prod_mdle_eip" {
+
+    tags = {
+        "Terraform" : "true"
+    }
+}
+
+resource "aws_elb" "prod_mdle_elb" {
+    name            = "prod-mdle"
+    instances       = aws_instance.prod_mdle_ec2.*.id
+    subnets         = [ aws_default_subnet.default_az1.id, aws_default_subnet.default_az2.id ]
+    security_groups = [ aws_security_group.prod_mdle_sg.id ]
+    
+    listener {
+        instance_port       = 80
+        instance_protocol   = "http"
+        lb_port             = 80
+        lb_protocol         = "http"
+    }
 
     tags = {
         "Terraform" : "true"
