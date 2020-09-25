@@ -22,14 +22,20 @@ variable "cidr_block_az_public" {
     description = "CIDR blocks for subnet public"
 }
 
-variable "az_public" {
-    default     = ["us-west-2a", "us-west-2c"]
-    type        = list(string)
-    description = "public AZs"
+variable "cidr_block_l0" {
+    default     = ["0.0.0.0/0"]
+    type        = list
+    description = "CIDR Block for any IP"
 }
 
 variable "az_private" {
-    default     = ["us-west-2b", "us-west-2d"]
+    default     = ["us-west-2a", "us-west-2c"]
     type        = list(string)
     description = "private AZs"
+}
+
+variable "az_public" {
+    default     = ["us-west-2b", "us-west-2d"]
+    type        = list(string)
+    description = "public AZs"
 }
