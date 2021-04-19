@@ -19,7 +19,7 @@ resource "aws_nat_gateway" "nat_gateway" {
     subnet_id     = var.private_subnets[count.index].id
 
     tags = {
-        Name = "Nats Gateway prod_mdle"
+        Name = "Nats Gateway"
         "Terraform" : "true"
     }
 }
