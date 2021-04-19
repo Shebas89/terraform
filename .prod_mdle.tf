@@ -243,16 +243,6 @@ resource "aws_eip_association" "prod_mdle_eipa_instance" {
     allocation_id   = aws_eip.prod_mdle_eip_i.id
 }
 
-# Elastic IP for Nat gateway
-resource "aws_eip" "prod_mdle_eip_nw" {
-    count = 2
-
-    vpc  = true
-    tags = {
-        "Terraform" : "true"
-    }
-}
-
 resource "aws_eip" "prod_mdle_eip_i" {
     vpc  = true
     
@@ -260,6 +250,16 @@ resource "aws_eip" "prod_mdle_eip_i" {
         "Terraform" : "true"
     }
 }
+
+# # Elastic IP for Nat gateway
+# resource "aws_eip" "prod_mdle_eip_nw" {
+#     count = 2
+
+#     vpc  = true
+#     tags = {
+#         "Terraform" : "true"
+#     }
+# }
 
 # Load Balancer
 resource "aws_elb" "prod_mdle_elb" {

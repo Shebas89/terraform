@@ -1,6 +1,6 @@
 # Internet gateway
-resource "aws_internet_gateway" "prod_mdle_igw" {
-    vpc_id = aws_vpc.prod_mdle_vpc.id
+resource "aws_internet_gateway" "internet_gate_way" {
+    vpc_id = var.vpc_id
 
     tags = {
         Name = "IG created by terraform"
@@ -10,13 +10,13 @@ resource "aws_internet_gateway" "prod_mdle_igw" {
 }
 
 # Nat IG
-resource "aws_nat_gateway" "prod_mdle_nw" {
-    depends_on = [aws_internet_gateway.prod_mdle_igw]
+resource "aws_nat_gateway" "nat_gateway" {
+    depends_on = [aws_internet_gateway.internet_gate_way]
 
-    count = length(var.az_private)
+    count = length(var.private_subnets)
 
-    allocation_id = aws_eip.prod_mdle_eip_nw[count.index].id
-    subnet_id     = aws_subnet.prod_mdle_az_private[count.index].id
+    allocation_id = aws_eip.eip_nw[count.index].id
+    subnet_id     = var.private_subnets[count.index].id
 
     tags = {
         Name = "Nats Gateway prod_mdle"
@@ -24,10 +24,10 @@ resource "aws_nat_gateway" "prod_mdle_nw" {
     }
 }
 # Public Subnet
-resource "aws_subnet" "prod_mdle_az_public" {
-    vpc_id              = aws_vpc.prod_mdle_vpc.id
-    cidr_block          = var.cidr_block_az_public
-    availability_zone   = var.az_public
+resource "aws_subnet" "subnet_public" {
+    vpc_id              = var.vpc_id
+    cidr_block          = var.cidr_block
+    availability_zone   = var.public_subnets
     tags = {
         Name = "public_sn"
         "Terraform" : "true"
@@ -35,12 +35,12 @@ resource "aws_subnet" "prod_mdle_az_public" {
 }
 
 # Private Subnet
-resource "aws_subnet" "prod_mdle_az_private"{
-    count = length(var.cidr_block_az_private)
+resource "aws_subnet" "subnet_private"{
+    count = length(var.private_subnets)
 
-    vpc_id              = aws_vpc.prod_mdle_vpc.id
+    vpc_id              = var.vpc_id
     cidr_block          = var.cidr_block_az_private[count.index]
-    availability_zone   = var.az_private[count.index]
+    availability_zone   = var.private_subnets[count.index]
 
     tags = {
         Name = "privates_sn"
@@ -50,14 +50,14 @@ resource "aws_subnet" "prod_mdle_az_private"{
 
 
 # Public Route
-resource "aws_route" "prod_mdle_public_r" {
-    route_table_id         = aws_route_table.prod_mdle_public_rt.id
-    gateway_id              = aws_internet_gateway.prod_mdle_igw.id
+resource "aws_route" "public_route" {
+    route_table_id         = aws_route_table.public_route_table.id
+    gateway_id             = aws_internet_gateway.internet_gate_way.id
     destination_cidr_block = "0.0.0.0/0"
 }
 
-resource "aws_route_table" "prod_mdle_public_rt" {
-    vpc_id = aws_vpc.prod_mdle_vpc.id
+resource "aws_route_table" "public_route_table" {
+    vpc_id = var.vpc_id
 
     tags = {
         Name = "Public RT"
@@ -66,18 +66,18 @@ resource "aws_route_table" "prod_mdle_public_rt" {
 }
 
 # Private Route
-resource "aws_route" "prod_mdle_private_r" {
-    count = length(var.az_private)
+resource "aws_route" "private_route_table" {
+    count = length(var.private_subnets)
 
-    route_table_id         = aws_route_table.prod_mdle_private_rt[count.index].id
+    route_table_id         = aws_route_table.private_route_table[count.index].id
     destination_cidr_block = "0.0.0.0/0"
-    nat_gateway_id         = aws_nat_gateway.prod_mdle_nw[count.index].id
+    nat_gateway_id         = aws_nat_gateway.nat_gateway[count.index].id
 }
 
-resource "aws_route_table" "prod_mdle_private_rt" {
+resource "aws_route_table" "private_route_table" {
     count = length(var.az_private)
     
-    vpc_id = aws_vpc.prod_mdle_vpc.id
+    vpc_id = var.vpc_id
 
     tags = {
         Name = "Private RT"
@@ -85,21 +85,21 @@ resource "aws_route_table" "prod_mdle_private_rt" {
     }
 }
 
-resource "aws_route_table_association" "prod_mdle_private_rta" {
+resource "aws_route_table_association" "private_rt_association" {
     count = length(var.cidr_block_az_private)
 
-    subnet_id         = aws_subnet.prod_mdle_az_private[count.index].id
-    route_table_id    = aws_route_table.prod_mdle_private_rt[count.index].id
+    subnet_id         = aws_subnet.subnet_private[count.index].id
+    route_table_id    = aws_route_table.private_route_table[count.index].id
 }
 
-resource "aws_route_table_association" "prod_mdle_public_rta" {
-    subnet_id         = aws_subnet.prod_mdle_az_public.id
-    route_table_id    = aws_route_table.prod_mdle_public_rt.id 
+resource "aws_route_table_association" "public_rt_association" {
+    subnet_id         = aws_subnet.public_subnets.id
+    route_table_id    = aws_route_table.public_route_table.id 
 }
 
 # NACLs of vpc
-resource "aws_network_acl" "prod_mdle_nacl" {
-    vpc_id = aws_vpc.prod_mdle_vpc.id
+resource "aws_network_acl" "network_acl" {
+    vpc_id = var.vpc_id
 
     ingress {
         protocol    = "tcp"
@@ -112,5 +112,15 @@ resource "aws_network_acl" "prod_mdle_nacl" {
 
     tags = {
         "terraform" : "true"
+    }
+}
+
+# Elastic IP for Nat gateway
+resource "aws_eip" "eip_nw" {
+    count = 2
+
+    vpc  = true
+    tags = {
+        "Terraform" : "true"
     }
 }
